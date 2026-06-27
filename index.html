@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ResumeAI — ATS Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #04080f;
+      --surface:  #0b1220;
+      --border:   #1a2540;
+      --accent:   #3b82f6;
+      --accent2:  #06b6d4;
+      --green:    #22d3a5;
+      --red:      #f87171;
+      --amber:    #fbbf24;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --radius:   14px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 18px 36px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, var(--bg) 0%, #060d1a 100%);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .logo-mark {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .logo-text { font-weight: 800; font-size: 17px; color: #f8fafc; letter-spacing: -0.3px; }
+    .logo-tag  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .header-badge {
+      margin-left: auto;
+      padding: 4px 12px; border-radius: 20px;
+      background: #22d3a522; color: var(--green);
+      border: 1px solid #22d3a533;
+      font-size: 12px; font-weight: 600;
+    }
+
+    /* ── LAYOUT ── */
+    main { max-width: 860px; margin: 0 auto; padding: 48px 20px 80px; }
+
+    /* ── HERO ── */
+    .hero { text-align: center; margin-bottom: 48px; }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 46px);
+      font-weight: 900; letter-spacing: -1.5px;
+      line-height: 1.1; margin-bottom: 14px;
+      color: #f8fafc;
+    }
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero p { color: var(--muted); font-size: 16px; max-width: 480px; margin: 0 auto; line-height: 1.6; }
+
+    /* ── UPLOAD CARD ── */
+    .upload-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+    }
+    .field-label {
+      display: block; font-size: 12px; font-weight: 700;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.6px; margin-bottom: 8px;
+    }
+    .job-input {
+      width: 100%; padding: 12px 16px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text);
+      font-size: 14px; font-family: inherit; outline: none;
+      margin-bottom: 20px; transition: border-color 0.2s;
+    }
+    .job-input:focus { border-color: var(--accent); }
+
+    /* Drop zone */
+    .dropzone {
+      border: 2px dashed var(--border); border-radius: var(--radius);
+      padding: 48px 24px; text-align: center; cursor: pointer;
+      transition: all 0.2s; position: relative; background: var(--bg);
+    }
+    .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: #3b82f608; }
+    .dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .drop-icon { font-size: 40px; margin-bottom: 12px; display: block; }
+    .drop-title { font-size: 16px; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
+    .drop-sub   { font-size: 13px; color: var(--muted); }
+    .drop-sub span { color: var(--accent); font-weight: 600; }
+    .drop-types {
+      margin-top: 16px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+    }
+    .drop-type {
+      padding: 3px 10px; border-radius: 6px; font-size: 11px;
+      font-weight: 600; font-family: 'JetBrains Mono', monospace;
+      background: var(--border); color: var(--muted);
+    }
+
+    /* File selected state */
+    .file-selected {
+      display: flex; align-items: center; gap: 14px;
+      background: #22d3a508; border: 1px solid #22d3a530;
+      border-radius: var(--radius); padding: 16px 20px; margin-bottom: 20px;
+    }
+    .file-icon { font-size: 28px; }
+    .file-name { font-weight: 700; font-size: 14px; color: var(--green); }
+    .file-size { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .file-remove {
+      margin-left: auto; background: transparent; border: none;
+      color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1;
+      padding: 4px 8px; border-radius: 6px; transition: color 0.15s;
+    }
+    .file-remove:hover { color: var(--red); }
+
+    /* Analyze button */
+    .btn-analyze {
+      width: 100%; margin-top: 20px; padding: 15px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; border-radius: 12px; color: #fff;
+      font-size: 16px; font-weight: 800; cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s; letter-spacing: 0.3px;
+      font-family: inherit;
+    }
+    .btn-analyze:hover:not(:disabled) { opacity: 0.92; transform: translateY(-1px); }
+    .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* ── LOADING ── */
+    .loading {
+      text-align: center; padding: 64px 20px;
+    }
+    .spinner {
+      width: 56px; height: 56px; margin: 0 auto 24px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-steps { display: flex; flex-direction: column; gap: 8px; max-width: 260px; margin: 24px auto 0; }
+    .loading-step {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--muted);
+      padding: 8px 14px; border-radius: 8px; background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .loading-step.done  { color: var(--green); border-color: #22d3a530; }
+    .loading-step.active { color: var(--text);  border-color: var(--accent); }
+    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .step-dot.spin { animation: spin 0.8s linear infinite; border-radius: 0; background: transparent; border: 2px solid currentColor; border-top-color: transparent; width: 10px; height: 10px; }
+
+    /* ── RESULTS ── */
+    .results { animation: fadeUp 0.5s ease; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Score header */
+    .score-header {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 32px; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 32px; flex-wrap: wrap;
+    }
+    .score-ring { position: relative; width: 150px; height: 150px; flex-shrink: 0; margin: 0 auto; }
+    .score-ring svg { transform: rotate(-90deg); }
+    .score-inner {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .score-num {
+      font-size: 44px; font-weight: 900;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+    }
+    .score-lbl { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+    .score-meta { flex: 1; min-width: 220px; }
+    .score-verdict { font-size: 22px; font-weight: 800; color: #f1f5f9; margin-bottom: 8px; }
+    .score-summary { font-size: 14px; color: #94a3b8; line-height: 1.65; margin-bottom: 20px; }
+
+    /* Sub-bars */
+    .sub-bars { display: grid; gap: 8px; }
+    .sub-bar { display: flex; align-items: center; gap: 10px; }
+    .sub-bar-label { font-size: 12px; color: var(--muted); width: 110px; flex-shrink: 0; }
+    .sub-bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; }
+    .sub-bar-fill  { height: 100%; border-radius: 3px; transition: width 1.2s cubic-bezier(.22,.68,0,1.2); }
+    .sub-bar-val { font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace; width: 34px; text-align: right; }
+
+    /* Section cards */
+    .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 600px) { .results-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 22px;
+    }
+    .card-head {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 14px;
+    }
+    .card-icon { font-size: 17px; }
+    .card-title { font-size: 14px; font-weight: 700; color: #f1f5f9; }
+
+    /* Skill tags */
+    .skill-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .skill-tag {
+      padding: 4px 11px; border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+      background: #fbbf2415; color: var(--amber);
+      border: 1px solid #fbbf2430;
+    }
+
+    /* List items */
+    .result-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .result-list li {
+      display: flex; gap: 10px; align-items: flex-start;
+      font-size: 13px; color: #94a3b8; line-height: 1.55;
+    }
+    .result-list li .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 5px;
+    }
+
+    /* Improvements — full width */
+    .card-full { grid-column: 1 / -1; }
+    .improvement-item {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .improvement-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .impr-row { display: flex; gap: 10px; margin-bottom: 6px; }
+    .impr-badge {
+      padding: 2px 8px; border-radius: 5px; font-size: 10px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      flex-shrink: 0; margin-top: 1px; height: fit-content;
+    }
+    .impr-badge.before { background: #f8717115; color: var(--red); border: 1px solid #f8717130; }
+    .impr-badge.after  { background: #22d3a515; color: var(--green); border: 1px solid #22d3a530; }
+    .impr-text { font-size: 13px; line-height: 1.6; }
+    .impr-text.before { color: #94a3b8; }
+    .impr-text.after  { color: #cffafe; font-weight: 500; }
+    .impr-reason { font-size: 12px; color: var(--muted); font-style: italic; margin-top: 4px; margin-left: 44px; }
+
+    /* Try again */
+    .btn-reset {
+      display: block; width: 100%; padding: 13px;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 12px; color: var(--muted);
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: border-color 0.2s, color 0.2s; font-family: inherit;
+      margin-top: 8px;
+    }
+    .btn-reset:hover { border-color: #475569; color: #94a3b8; }
+
+    .error-box {
+      background: #f8717110; border: 1px solid #f8717130;
+      border-radius: 12px; padding: 16px 20px;
+      color: var(--red); font-size: 14px; margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">📋</div>
+  <div>
+    <div class="logo-text">ResumeAI</div>
+    <div class="logo-tag">ATS Resume Analyzer</div>
+  </div>
+  <div class="header-badge">● Powered by Gemini</div>
+</header>
+
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <h1>Know your <span>ATS score</span><br/>before the recruiter does</h1>
+    <p>Upload your resume and get an instant AI analysis — score, gaps, strengths, and rewritten bullet points.</p>
+  </div>
+
+  <!-- UPLOAD SECTION -->
+  <div id="uploadSection">
+    <div class="upload-card">
+      <label class="field-label">Target Job Role (optional)</label>
+      <input class="job-input" id="jobTitle" type="text" placeholder="e.g. Software Engineer, Data Analyst, Product Manager" />
+
+      <label class="field-label">Upload Resume</label>
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" accept=".pdf,.docx,.txt" />
+        <span class="drop-icon">📄</span>
+        <div class="drop-title">Drop your resume here</div>
+        <div class="drop-sub">or <span>click to browse</span></div>
+        <div class="drop-types">
+          <span class="drop-type">.pdf</span>
+          <span class="drop-type">.docx</span>
+          <span class="drop-type">.txt</span>
+        </div>
+      </div>
+
+      <div class="file-selected" id="fileSelected" style="display:none">
+        <span class="file-icon">📑</span>
+        <div>
+          <div class="file-name" id="fileName">—</div>
+          <div class="file-size" id="fileSize">—</div>
+        </div>
+        <button class="file-remove" id="removeFile">✕</button>
+      </div>
+
+      <div class="error-box" id="errorBox" style="display:none"></div>
+
+      <button class="btn-analyze" id="analyzeBtn" disabled>
+        Analyze Resume →
+      </button>
+    </div>
+  </div>
+
+  <!-- LOADING SECTION -->
+  <div id="loadingSection" style="display:none">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div style="font-size:17px;font-weight:700;color:#f1f5f9;margin-bottom:6px">Analyzing your resume…</div>
+      <div style="font-size:13px;color:var(--muted)">This takes about 10–15 seconds</div>
+      <div class="loading-steps">
+        <div class="loading-step" id="step1"><div class="step-dot"></div> Extracting text from PDF</div>
+        <div class="loading-step" id="step2"><div class="step-dot"></div> Sending to Gemini AI</div>
+        <div class="loading-step" id="step3"><div class="step-dot"></div> Scoring ATS compatibility</div>
+        <div class="loading-step" id="step4"><div class="step-dot"></div> Generating improvements</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS SECTION -->
+  <div id="resultsSection" style="display:none" class="results"></div>
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────────
+let selectedFile = null;
+const API_BASE = 'http://localhost:8000';
+
+// ── Elements ──────────────────────────────────────────────────
+const dropzone     = document.getElementById('dropzone');
+const fileInput    = document.getElementById('fileInput');
+const fileSelected = document.getElementById('fileSelected');
+const fileName     = document.getElementById('fileName');
+const fileSize     = document.getElementById('fileSize');
+const removeFile   = document.getElementById('removeFile');
+const analyzeBtn   = document.getElementById('analyzeBtn');
+const errorBox     = document.getElementById('errorBox');
+const uploadSection  = document.getElementById('uploadSection');
+const loadingSection = document.getElementById('loadingSection');
+const resultsSection = document.getElementById('resultsSection');
+
+// ── File handling ─────────────────────────────────────────────
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+function setFile(file) {
+  if (!file) return;
+  selectedFile = file;
+  dropzone.style.display = 'none';
+  fileName.textContent = file.name;
+  fileSize.textContent = formatBytes(file.size);
+  fileSelected.style.display = 'flex';
+  analyzeBtn.disabled = false;
+  hideError();
+}
+
+fileInput.addEventListener('change', e => setFile(e.target.files[0]));
+removeFile.addEventListener('click', () => {
+  selectedFile = null;
+  fileInput.value = '';
+  fileSelected.style.display = 'none';
+  dropzone.style.display = 'block';
+  analyzeBtn.disabled = true;
+});
+
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+  setFile(e.dataTransfer.files[0]);
+});
+
+// ── Error ─────────────────────────────────────────────────────
+function showError(msg) { errorBox.textContent = msg; errorBox.style.display = 'block'; }
+function hideError()    { errorBox.style.display = 'none'; }
+
+// ── Loading steps animation ───────────────────────────────────
+let stepTimer;
+function animateSteps() {
+  const steps = ['step1','step2','step3','step4'];
+  let i = 0;
+  function next() {
+    if (i > 0) document.getElementById(steps[i-1]).className = 'loading-step done';
+    if (i < steps.length) {
+      document.getElementById(steps[i]).className = 'loading-step active';
+      i++;
+      stepTimer = setTimeout(next, 3200);
+    }
+  }
+  next();
+}
+
+// ── Analyze ───────────────────────────────────────────────────
+analyzeBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  hideError();
+
+  uploadSection.style.display  = 'none';
+  loadingSection.style.display = 'block';
+  resultsSection.style.display = 'none';
+  animateSteps();
+
+  const form = new FormData();
+  form.append('file', selectedFile);
+  const job = document.getElementById('jobTitle').value.trim();
+  if (job) form.append('job_title', job);
+
+  try {
+    const res  = await fetch(`${API_BASE}/analyze`, { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Analysis failed');
+    clearTimeout(stepTimer);
+    renderResults(data);
+  } catch(err) {
+    clearTimeout(stepTimer);
+    loadingSection.style.display = 'none';
+    uploadSection.style.display  = 'block';
+    showError('❌ ' + err.message + ' — make sure the backend is running on port 8000.');
+  }
+});
+
+// ── Render results ────────────────────────────────────────────
+function scoreColor(s) {
+  if (s >= 80) return '#22d3a5';
+  if (s >= 60) return '#fbbf24';
+  return '#f87171';
+}
+function scoreVerdict(s) {
+  if (s >= 80) return '🎯 ATS-Ready';
+  if (s >= 60) return '⚠️ Needs Improvement';
+  return '🚨 High Risk';
+}
+
+function renderResults(d) {
+  loadingSection.style.display = 'none';
+
+  const score  = d.ats_score ?? 0;
+  const color  = scoreColor(score);
+  const R = 65, circ = 2 * Math.PI * R;
+  const dash   = circ - (score / 100) * circ;
+
+  const bars = [
+    { label: 'Keywords',      val: d.score_breakdown?.keywords       ?? 0, max: 25 },
+    { label: 'Formatting',    val: d.score_breakdown?.formatting     ?? 0, max: 25 },
+    { label: 'Content',       val: d.score_breakdown?.content_quality ?? 0, max: 25 },
+    { label: 'Completeness',  val: d.score_breakdown?.completeness   ?? 0, max: 25 },
+  ];
+
+  const barsHTML = bars.map(b => {
+    const pct  = (b.val / b.max) * 100;
+    const bclr = scoreColor(pct);
+    return `<div class="sub-bar">
+      <div class="sub-bar-label">${b.label}</div>
+      <div class="sub-bar-track"><div class="sub-bar-fill" style="width:0%;background:${bclr}" data-w="${pct}"></div></div>
+      <div class="sub-bar-val">${b.val}/${b.max}</div>
+    </div>`;
+  }).join('');
+
+  const skillsHTML = (d.missing_skills ?? []).length
+    ? (d.missing_skills).map(s => `<span class="skill-tag">${s}</span>`).join('')
+    : '<span style="color:var(--muted);font-size:13px">None detected — great job!</span>';
+
+  const strengthsHTML = (d.strengths ?? []).map(s =>
+    `<li><div class="dot" style="background:var(--green)"></div>${s}</li>`).join('');
+
+  const weaknessesHTML = (d.weaknesses ?? []).map(w =>
+    `<li><div class="dot" style="background:var(--red)"></div>${w}</li>`).join('');
+
+  const improvementsHTML = (d.improvements ?? []).map(imp => `
+    <div class="improvement-item">
+      <div class="impr-row">
+        <span class="impr-badge before">Before</span>
+        <span class="impr-text before">${imp.original}</span>
+      </div>
+      <div class="impr-row">
+        <span class="impr-badge after">After</span>
+        <span class="impr-text after">${imp.improved}</span>
+      </div>
+      <div class="impr-reason">💡 ${imp.reason}</div>
+    </div>`).join('');
+
+ resultsSection.innerHTML = `
+    <!-- Score header -->
+    <div class="score-header">
+      <div class="score-ring">
+        <svg width="150" height="150" viewBox="0 0 150 150">
+          <circle cx="75" cy="75" r="${R}" fill="none" stroke="var(--border)" stroke-width="10"/>
+          <circle cx="75" cy="75" r="${R}" fill="none" stroke="${color}" stroke-width="10"
+            stroke-dasharray="${circ}" stroke-dashoffset="${circ}"
+            stroke-linecap="round" id="scoreArc"
+            style="transition:stroke-dashoffset 1.4s cubic-bezier(.22,.68,0,1.2)"/>
+        </svg>
+        <div class="score-inner">
+          <div class="score-num" style="color:${color}" id="scoreNum">0</div>
+          <div class="score-lbl">ATS Score</div>
+        </div>
+      </div>
+      <div class="score-meta">
+        <div class="score-verdict">${scoreVerdict(score)}</div>
+        <div class="score-summary">${d.summary ?? ''}</div>
+        <div class="sub-bars">${barsHTML}</div>
+      </div>
+    </div>
+
+    <!-- Grid cards -->
+    <div class="results-grid">
+      <div class="card">
+        <div class="card-head"><span class="card-icon">🔑</span><span class="card-title">Missing Skills</span></div>
+        <div class="skill-tags">${skillsHTML}</div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-icon">✅</span><span class="card-title">Strengths</span></div>
+        <ul class="result-list">${strengthsHTML}</ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-icon">⚠️</span><span class="card-title">Weaknesses</span></div>
+        <ul class="result-list">${weaknessesHTML}</ul>
+      </div>
+
+      <div class="card card-full">
+        <div class="card-head"><span class="card-icon">✍️</span><span class="card-title">Improved Bullet Points</span></div>
+        ${improvementsHTML}
+      </div>
+    </div>
+
+    <button class="btn-reset" id="resetBtn">← Analyze Another Resume</button>
+  `;
+
+  resultsSection.style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Animate score ring + counter
+  requestAnimationFrame(() => {
+    document.getElementById('scoreArc').style.strokeDashoffset = dash;
+    let cur = 0;
+    const tick = setInterval(() => {
+      cur = Math.min(cur + Math.ceil(score / 40), score);
+      document.getElementById('scoreNum').textContent = cur;
+      if (cur >= score) clearInterval(tick);
+    }, 35);
+    // Animate sub-bars
+    document.querySelectorAll('.sub-bar-fill').forEach(el => {
+      setTimeout(() => { el.style.width = el.dataset.w + '%'; }, 200);
+    });
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    resultsSection.style.display = 'none';
+    uploadSection.style.display  = 'block';
+    selectedFile = null;
+    fileInput.value = '';
+    fileSelected.style.display = 'none';
+    dropzone.style.display     = 'block';
+    analyzeBtn.disabled = true;
+    document.getElementById('jobTitle').value = '';
+  });
+}
+</script>
+</body>
+</html>
